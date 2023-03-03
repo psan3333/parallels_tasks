@@ -12,28 +12,6 @@ int main(int argc, char* argv[]) {
         A[i] = (double*)calloc(size, sizeof(double));
     }
 
-    A[size - 1][0] = 10.0;
-    A[size - 1][size - 1] = 20.0;
-    A[0][size - 1] = 30.0;
-    A[0][0] = 20.0;
-
-    for (int i = 1; i < size; i++) {
-        A[size - 1][i] = A[size - 1][i - 1] + (double)10.0 / size;
-    }
-
-    for (int i = size - 2; i >= 0; i--) {
-        A[i][size - 1] = A[i + 1][size - 1] + (double)10.0 / size;
-    }
-
-    for (int i = 1; i < size; i++){
-        A[0][i] = A[0][i - 1] + (double)10.0 / size;
-    }
-
-    for (int i = 1; i < size; i++) {
-        A[i][0] = A[i - 1][0] + (double)10.0 / size;
-    }
-
-
     double** Anew = (double**)malloc(size * sizeof(double*));
     for (int i = 0; i < size; i++) {
         Anew[i] = (double*)calloc(size, sizeof(double));
@@ -51,6 +29,27 @@ int main(int argc, char* argv[]) {
     if (precision < max_precision) {
         printf("Precision mustn't be lower than 10^-6");
         return 0;
+    } 
+
+    A[size - 1][0] = 10.0;
+    A[size - 1][size - 1] = 20.0;
+    A[0][size - 1] = 30.0;
+    A[0][0] = 20.0;
+
+    for (int i = 1; i < size - 1; i++) {
+        A[size - 1][i] = A[size - 1][0] + (double)10.0 * i / (size - 1);
+    }
+
+    for (int i = size - 2; i > 0; i--) {
+        A[i][size - 1] = A[size  - 1][size - 1] + (double)10.0 * (size - i - 1) / (size - 1);
+    }
+
+    for (int i = 1; i < size - 1; i++){
+        A[0][i] = A[0][0] + (double)10.0 * i / (size - 1);
+    }
+
+    for (int i = size - 2; i > 0; i--) {
+        A[i][0] = A[size - 1][0] + (double)10.0 * (size - i - 1) / (size - 1);
     }
 
     while (error > precision && iter < max_iter_input) {
@@ -61,18 +60,18 @@ int main(int argc, char* argv[]) {
         for (int j = 1; j < size - 1; j++){
             for (int i = 1; i < size - 1; i++) {
                 Anew[i][j] = 0.25 * ((A[i + 1][j] + A[i - 1][j]) + (A[i][j - 1] + A[i][j + 1]));
-                error = (error >= Anew[i][j] - A[i][j]) ? error : (Anew[i][j] - A[i][j]);
+                error = fmax( error, fabs(Anew[j][i] - A[j][i]));
             }
         }
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
+        for (int i = 1; i < size - 1; i++) {
+            for (int j = 1; j < size - 1; j++) {
                 A[i][j] = Anew[i][j];
             }
         }
     }
-
-    printf("%d %lf", iter, error);
+    
+    printf("%d %lf\n", iter, error);
 
     for (int i = 0; i < size; i++) {
         free(A[i]);
