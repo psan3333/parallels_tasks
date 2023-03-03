@@ -67,9 +67,9 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        #pragma acc parallel loop 
+        #pragma acc parallel loop gang worker num_workers(4) vector_length(32)
         for (int i = 1; i < size - 1; i++) {
-            #pragma acc loop
+            #pragma acc loop vector
             for (int j = 1; j < size - 1; j++) {
                 A[i][j] = Anew[i][j];
             }
