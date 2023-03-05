@@ -27,13 +27,15 @@ int main(int argc, char* argv[]) {
         return 0;
     } 
 
-  
+    //сетка хранится в одномерном массиве размера size*size 
     double* A = (double*)calloc(size * size, sizeof(double));
     double* Anew = (double*)calloc(size * size, sizeof(double));
 
     memset(A, 0, size * size * sizeof(double));
     memset(Anew, 0, size * size * sizeof(double));
 
+	
+    //инициализация сетки (значения в углах: 10, 20, 30, 20 - с левого нижнего края против часовой стрелки)
     A[0] = 10.0;
     A[size - 1] = 20.0;
     A[size * size - 1] = 30.0;
@@ -44,12 +46,11 @@ int main(int argc, char* argv[]) {
     Anew[size * size - 1] = 30.0;
     Anew[size * (size - 1)] = 20.0;
 
-    #pragma acc data copy(A[0:size*size], Anew[0:size*size]) 
+    #pragma acc data copy(A[0:size*size], Anew[0:size*size]) //копирование данных с CPU на GPU
     {
         clock_t start = clock(); //побочный таймер
         double step = 10.0 / (size - 1); //шаг инициализации краёв сетки
 
-	//инициализация сетки (значения в углах: 10, 20, 30, 20 - с левого нижнего края против часовой стрелки)
         #pragma acc parallel loop vector worker num_workers(4) vector_length(32)
         for (int i = 1; i < size - 1; i++)
         {	
