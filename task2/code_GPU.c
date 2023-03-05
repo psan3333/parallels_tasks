@@ -9,6 +9,8 @@ int main(int argc, char* argv[]) {
 
     int size = atoi(argv[2]);
 
+	
+    //проверка правильности ввода значений
     int max_iter_input = atoi(argv[3]);
     int iter = 0, max_iter = 1000000;
     if (max_iter_input > max_iter){
@@ -23,6 +25,7 @@ int main(int argc, char* argv[]) {
         return 0;
     } 
 
+  
     double* A = (double*)calloc(size * size, sizeof(double));
     double* Anew = (double*)calloc(size * size, sizeof(double));
 
@@ -30,14 +33,14 @@ int main(int argc, char* argv[]) {
     memset(Anew, 0, size * size * sizeof(double));
 
     A[0] = 10.0;
-	A[size - 1] = 20.0;
-	A[size * size - 1] = 30.0;
-	A[size * (size - 1)] = 20.0;
+    A[size - 1] = 20.0;
+    A[size * size - 1] = 30.0;
+    A[size * (size - 1)] = 20.0;
 
     Anew[0] = 10.0;
-	Anew[size - 1] = 20.0;
-	Anew[size * size - 1] = 30.0;
-	Anew[size * (size - 1)] = 20.0;
+    Anew[size - 1] = 20.0;
+    Anew[size * size - 1] = 30.0;
+    Anew[size * (size - 1)] = 20.0;
 
     #pragma acc data copy(A[0:size*size], Anew[0:size*size]) 
     {
