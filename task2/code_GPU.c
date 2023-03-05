@@ -71,7 +71,6 @@ int main(int argc, char* argv[]) {
                         error = fmax(error, fabs(Anew[i * size + j] - A[i * size + j]));
                     }
                 }
-                printf("%lf %d\n", error, iter);
             }
             else {
                 #pragma acc parallel loop vector vector_length(256) gang num_gangs(256) collapse(2) reduction(max:error)
@@ -81,7 +80,6 @@ int main(int argc, char* argv[]) {
                         error = fmax(error, fabs(Anew[i * size + j] - A[i * size + j]));
                     }
                 }
-                printf("%lf %d\n", error, iter);
             }
 
         }
