@@ -2,17 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <time.h>
+#include <memory.h>
 
 int main(int argc, char* argv[]) {
 
     int size = atoi(argv[2]);
-
-    double** A = (double**)malloc(size * sizeof(double*));
-    double** Anew = (double**)malloc(size * sizeof(double*));
-    for (int i = 0; i < size; i++) {
-        A[i] = (double*)calloc(size, sizeof(double));
-        Anew[i] = (double*)calloc(size, sizeof(double));
-    }
 
     int max_iter_input = atoi(argv[3]);
     int iter = 0, max_iter = 1000000;
@@ -22,67 +17,81 @@ int main(int argc, char* argv[]) {
     }
 
     double precision = atof(argv[1]);
-    double error = 1.0, max_precision = 0.000001;
+    double max_precision = 0.000001, error = precision + 1.0;
     if (precision < max_precision) {
         printf("Precision mustn't be lower than 10^-6");
         return 0;
     } 
 
-    A[size - 1][0] = 10.0;
-    A[size - 1][size - 1] = 20.0;
-    A[0][size - 1] = 30.0;
-    A[0][0] = 20.0;
-    Anew[size - 1][0] = 10.0;
-    Anew[size - 1][size - 1] = 20.0;
-    Anew[0][size - 1] = 30.0;
-    Anew[0][0] = 20.0;
+    double* A = (double*)calloc(size * size, sizeof(double));
+    double* Anew = (double*)calloc(size * size, sizeof(double));
 
+    memset(A, 0, size * size * sizeof(double));
+    memset(Anew, 0, size * size * sizeof(double));
 
-    #pragma acc data copy(A[0:size][0:size], Anew[0:size][0:size]) 
+    A[0] = 10.0;
+	A[size - 1] = 20.0;
+	A[size * size - 1] = 30.0;
+	A[size * (size - 1)] = 20.0;
+
+    Anew[0] = 10.0;
+	Anew[size - 1] = 20.0;
+	Anew[size * size - 1] = 30.0;
+	Anew[size * (size - 1)] = 20.0;
+
+    #pragma acc data copy(A[0:size*size], Anew[0:size*size]) 
     {
-        #pragma acc parallel loop gang worker num_workers(4) vector_length(32)
-        for (int i = 1; i < size - 1; i++) {
-            A[size - 1][i] = A[size - 1][0] + (double)10.0 * i / (size - 1);
-            Anew[size - 1][i] = A[size - 1][i];
+        clock_t start = clock();
+        double step = 10.0 / (size - 1);
 
-            A[0][i] = A[0][0] + (double)10.0 * i / (size - 1);
-            Anew[0][i] = A[0][i];
+        #pragma acc parallel loop vector worker num_workers(4) vector_length(32)
+        for (int i = 1; i < size - 1; i++)
+        {	
+            A[i] = A[0] + i * step;
+            A[i * size] = A[0] + i * step;
+            A[size - 1 + size * i] = A[size - 1] + i * step;
+            A[size * (size - 1) + i] = A[size * (size - 1)] + i * step;
 
-            A[size - 1 - i][size - 1] = A[size  - 1][size - 1] + (double)10.0 * i / (size - 1);
-            Anew[size - 1 - i][size - 1] = A[size - 1 - i][size - 1];
-
-            A[size - 1 - i][0] = A[size - 1][0] + (double)10.0 * i / (size - 1);
-            Anew[size - 1 - i][0] = A[size - 1 - i][0];
+            Anew[i] = Anew[0] + i * step;
+            Anew[i * size] = Anew[0] + i * step;
+            Anew[size - 1 + size * i] = Anew[size - 1] + i * step;
+            Anew[size * (size - 1) + i] = Anew[size * (size - 1)] + i * step;
         }
-
+        
         while (error > precision && iter < max_iter_input) {
 
             error = 0.0;
-
             ++iter;
 
-            #pragma acc parallel loop gang worker num_workers(4) vector_length(32) reduction(max:error)
-            for (int j = 1; j < size - 1; j++){
-                #pragma acc loop vector reduction(max:error)
-                for (int i = 1; i < size - 1; i++) {
-                    if (iter % 2) {
-                        Anew[i][j] = 0.25 * (A[i + 1][j] + A[i - 1][j] + A[i][j - 1] + A[i][j + 1]);
+            if (iter % 2) {
+                #pragma acc parallel loop vector vector_length(256) gang num_gangs(256) collapse(2) reduction(max:error)
+                for (int i = 1; i < size - 1; i++){
+                    for (int j = 1; j < size - 1; j++) {
+                        Anew[i * size + j] = 0.25 * (A[i * size + j - 1] + A[(i - 1) * size + j] + A[(i + 1) * size + j] + A[i * size + j + 1]);
+                        error = fmax(error, fabs(Anew[i * size + j] - A[i * size + j]));
                     }
-                    else {
-                        A[i][j] = 0.25 * (Anew[i + 1][j] + Anew[i - 1][j] + Anew[i][j - 1] + Anew[i][j + 1]);
-                    }
-                    error = fmax(error, fabs(Anew[j][i] - A[j][i]));
                 }
+                printf("%lf %d\n", error, iter);
             }
-        }
+            else {
+                #pragma acc parallel loop vector vector_length(256) gang num_gangs(256) collapse(2) reduction(max:error)
+                for (int i = 1; i < size - 1; i++){
+                    for (int j = 1; j < size - 1; j++) {
+                        A[i * size + j] = 0.25 * (Anew[i * size + j - 1] + Anew[(i - 1) * size + j] + Anew[(i + 1) * size + j] + Anew[i * size + j + 1]);
+                        error = fmax(error, fabs(Anew[i * size + j] - A[i * size + j]));
+                    }
+                }
+                printf("%lf %d\n", error, iter);
+            }
 
-        printf("%d %lf\n", iter, error);
+        }
+        
+        clock_t end = clock();
+        printf("%lf\n", (double)(end - start) / CLOCKS_PER_SEC);
+
     }
-    
-    for (int i = 0; i < size; i++) {
-        free(A[i]);
-        free(Anew[i]);
-    }
+
+    printf("%d %lf\n", iter, error);
 
     free(Anew);
     free(A);
