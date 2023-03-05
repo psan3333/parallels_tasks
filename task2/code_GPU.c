@@ -7,20 +7,22 @@
 
 int main(int argc, char* argv[]) {
 
+    //размер сетки
     int size = atoi(argv[2]);
 
-	
     //проверка правильности ввода значений
+    //количество итераций
     int max_iter_input = atoi(argv[3]);
     int iter = 0, max_iter = 1000000;
-    if (max_iter_input > max_iter){
+    if (max_iter_input > max_iter){ //проверка, не превышает ли ввод предельное число итераций max_iter
         printf("Count of iterations mustn't exceed 10^6 operations");
         return 0;
     }
 
+    //точность
     double precision = atof(argv[1]);
     double max_precision = 0.000001, error = precision + 1.0;
-    if (precision < max_precision) {
+    if (precision < max_precision) { //проверка, не превышает ли ввод предельную точность max_precision
         printf("Precision mustn't be lower than 10^-6");
         return 0;
     } 
@@ -44,9 +46,10 @@ int main(int argc, char* argv[]) {
 
     #pragma acc data copy(A[0:size*size], Anew[0:size*size]) 
     {
-        clock_t start = clock();
-        double step = 10.0 / (size - 1);
+        clock_t start = clock(); //побочный таймер
+        double step = 10.0 / (size - 1); //шаг инициализации краёв сетки
 
+	//инициализация сетки (значения в углах: 10, 20, 30, 20 - с левого нижнего края против часовой стрелки)
         #pragma acc parallel loop vector worker num_workers(4) vector_length(32)
         for (int i = 1; i < size - 1; i++)
         {	
@@ -66,7 +69,7 @@ int main(int argc, char* argv[]) {
             error = 0.0;
             ++iter;
 
-            if (iter % 2) {
+            if (iter % 2) { //деление на 2 происходит во избежание копирования данных между массивами
                 #pragma acc parallel loop vector vector_length(256) gang num_gangs(256) collapse(2) reduction(max:error)
                 for (int i = 1; i < size - 1; i++){
                     for (int j = 1; j < size - 1; j++) {
@@ -87,13 +90,14 @@ int main(int argc, char* argv[]) {
 
         }
         
-        clock_t end = clock();
+        clock_t end = clock(); //конец отсчёта таймера
         printf("%lf\n", (double)(end - start) / CLOCKS_PER_SEC);
 
     }
 
-    printf("%d %lf\n", iter, error);
+    printf("%d %lf\n", iter, error); //вывод: количество итераций 'iter' основного цикла 'while' и полученная ошибка 'error'
 
+    //освобождение памяти
     free(Anew);
     free(A);
 
