@@ -70,24 +70,19 @@ int main(int argc, char* argv[]) {
             error = 0.0;
             ++iter;
 
-            if (iter % 2) { //деление на 2 происходит во избежание копирования данных между массивами
-                #pragma acc parallel loop vector vector_length(256) gang num_gangs(256) collapse(2) reduction(max:error)
-                for (int i = 1; i < size - 1; i++){
-                    for (int j = 1; j < size - 1; j++) {
-                        Anew[i * size + j] = 0.25 * (A[i * size + j - 1] + A[(i - 1) * size + j] + A[(i + 1) * size + j] + A[i * size + j + 1]);
-                        error = fmax(error, fabs(Anew[i * size + j] - A[i * size + j]));
-                    }
+            #pragma acc data present(A, Anew)
+            #pragma acc parallel loop vector vector_length(256) gang num_gangs(256) collapse(2) reduction(max:error) async(1)
+            for (int i = 1; i < size - 1; i++){
+                for (int j = 1; j < size - 1; j++) {
+                    Anew[i * size + j] = 0.25 * (A[i * size + j - 1] + A[(i - 1) * size + j] + A[(i + 1) * size + j] + A[i * size + j + 1]);
+                    error = fmax(error, fabs(Anew[i * size + j] - A[i * size + j]));
                 }
             }
-            else {
-                #pragma acc parallel loop vector vector_length(256) gang num_gangs(256) collapse(2) reduction(max:error)
-                for (int i = 1; i < size - 1; i++){
-                    for (int j = 1; j < size - 1; j++) {
-                        A[i * size + j] = 0.25 * (Anew[i * size + j - 1] + Anew[(i - 1) * size + j] + Anew[(i + 1) * size + j] + Anew[i * size + j + 1]);
-                        error = fmax(error, fabs(Anew[i * size + j] - A[i * size + j]));
-                    }
-                }
-            }
+            #pragma acc wait
+
+            double* temp = A;
+            A = Anew;
+            Anew = temp;
 
         }
         
