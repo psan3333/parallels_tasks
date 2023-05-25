@@ -238,9 +238,9 @@ int main(int argc, char* argv[])
 
 	while (num_of_iterations < max_iterations && accuracy > max_accuracy) {
 
-		interpolate_boundaries<<<size, 1, 0, cuda_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
+		interpolate_boundaries<<<size, 1, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
 
-		cudaStreamSynchronize(cuda_stream);
+		cudaStreamSynchronize(matrix_calc_stream);
 		CUDACHECK("cuda_stream synchronization (after boundaries calculations)")
 
 		interpolate<<<gridDim, blockDim, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
