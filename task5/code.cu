@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 		cudaStreamSynchronize(cuda_stream);
 		CUDACHECK("cuda_stream synchronization (after boundaries calculations)")
 
-		interpolate<<<blockDim, gridDim, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
+		interpolate<<<gridDim, blockDim, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
 
 		// updates accuracy 1/100 times of main cycle iterations and on the last iteration
 		if (num_of_iterations % 100 == 0 || num_of_iterations + 1 == max_iterations) {
