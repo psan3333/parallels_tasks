@@ -75,6 +75,14 @@ __global__ void abs_diff(double* A, double* Anew, double* buff, size_t size, siz
 	}
 }
 
+int findNearestPowerOfTwo(size_t num) {
+    int power = 1;
+    while (power < num) {
+        power <<= 1;
+    }
+    return power;
+}
+
 int main(int argc, char* argv[])
 {
 
@@ -223,7 +231,7 @@ int main(int argc, char* argv[])
 	CUDACHECK("matrix_calc_stream creation")
 
 	// params for cuda functions
-	unsigned int threads_x = (size < 1024) ? size : 1024;
+	unsigned int threads_x = std::min(findNearestPowerOfTwo(size), 1024);
 	unsigned int blocks_y = area_for_one_process;
 	unsigned int blocks_x = size / threads_x;
 
