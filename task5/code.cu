@@ -1,13 +1,11 @@
 #include <iostream>
-#include <mpi.h>
-#include <cmath>
-#include <string>
-#include <sstream>
-#include <exception>
 #include <cstring>
+#include <cmath>
+#include <ctime>
+#include <iomanip>
 #include <cuda_runtime.h>
-#include <cuda.h>
 #include <cub/cub.cuh>
+#include <mpi.h>
 
 // error checks
 #define CUDACHECK(name) if (cudaGetLastError() != cudaSuccess) { throw std::runtime_error(name); } 
