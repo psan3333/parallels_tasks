@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
 			MPI_CHECK(error_code, "mpi reduction")
 
 			// copy values from d_out on GPU to accuracy on CPU
-			cudaMemcpyAsync(&accuracy, d_out, sizeof(double), cudaMemcpyDeviceToHost);
+			cudaMemcpyAsync(&accuracy, d_out, sizeof(double), cudaMemcpyDeviceToHost, matrix_calc_stream);
 			CUDACHECK("copy to accuracy")
 		}
 
