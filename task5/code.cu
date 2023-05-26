@@ -271,17 +271,17 @@ int main(int argc, char* argv[])
 		if (rank != 0)
 		{
 			error_code = MPI_Sendrecv(
-				dev_Anew + size + 1, 
-				size - 2, 
-				MPI_DOUBLE, 
-				rank - 1, 
+				dev_Anew + size + 1,  // sending buffer
+				size - 2,  // size of sent data
+				MPI_DOUBLE,  // sening data type
+				rank - 1,  // where data was sent
+				0,  //
+				dev_Anew + 1,  // receiving buffer
+				size - 2,  // size of received data
+				MPI_DOUBLE,  // received data type
+				rank - 1,  // received from which device
 				0, 
-				dev_Anew + 1, 
-				size - 2, 
-				MPI_DOUBLE, 
-				rank - 1, 
-				0, 
-				MPI_COMM_WORLD, 
+				MPI_COMM_WORLD,  // communicator
 				MPI_STATUS_IGNORE
 			);
 			MPI_CHECK(error_code, "top edge receiving")
