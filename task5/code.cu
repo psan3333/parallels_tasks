@@ -24,7 +24,7 @@ double 	*A 		= nullptr,  // buffer for main matrix
 	*d_out 		= nullptr,  // buffer for error on device
 	*d_temp_storage = nullptr;  // temporary buffer for cub max reduction
 
-// handler funnction which executes before end of program execution
+// handler funnction which executes before end of program execution and frees memory allocated dynamically
 void free_pointers()
 {
 	if (A) 	            cudaFree(A);
@@ -43,7 +43,7 @@ __global__ void interpolate(double* A, double* Anew, size_t size, size_t size_pe
 	unsigned int y_idx = blockIdx.y * blockDim.y + threadIdx.y;
 
 	if(!(x_idx < 1 || y_idx < 2 || x_idx > size - 2 || y_idx > size_per_one_gpu - 2)) {
-	AVG_CALC(A, Anew, size, y_idx, x_idx)
+		AVG_CALC(A, Anew, size, y_idx, x_idx)
 	}	
 }
 
@@ -52,6 +52,7 @@ __global__ void interpolate_boundaries(double* A, double* Anew, size_t size, siz
 	unsigned int up_idx = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int down_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
+	// check if horizontal index between 1 and (size - 2) then calculates result
 	if (!(up_idx == 0 || up_idx > size - 2)) {
 		AVG_CALC(A, Anew, size, 1, up_idx)
 		AVG_CALC(A, Anew, size, (size_per_one_gpu - 2), down_idx)
@@ -63,9 +64,10 @@ __global__ void abs_diff(double* A, double* Anew, double* buff, size_t size, siz
 
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-
 	size_t idx = y * size + x;
-	if(!(x == 0 || y == 0 || x == size - 1 || y == size_per_one_gpu - 1))
+	
+	// check if idx in allocated area then calculate result
+	if(!(x <= 0 || y <= 0 || x => size - 1 || y => size_per_one_gpu - 1))
 	{
 		buff[idx] = std::abs(A[idx] - Anew[idx]);
 	}
