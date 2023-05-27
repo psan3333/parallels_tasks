@@ -316,7 +316,9 @@ int main(int argc, char* argv[])
 	}
 	
 	cudaStreamDestroy(cuda_stream);
+	CUDACHECK("Destroy cuda_stream")
 	cudaStreamDestroy(matrix_calc_stream);
+	CUDACHECK("Destroy matrix_calc_stream")
 
 	if (rank == 0) {
 		printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
