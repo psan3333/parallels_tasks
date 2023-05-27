@@ -28,17 +28,22 @@ double 	*A 		= nullptr,  // buffer for main matrix
 void free_pointers()
 {
 	std::cout << "End of execution" << std::endl;
-	if (A) 	            cudaFree(A); CUDACHECK("free A")
-	if (Anew) 	    cudaFree(Anew); CUDACHECK("free Anew")
-	if (dev_A)	    cudaFree(dev_A); CUDACHECK("free dev_A")
-	if (dev_Anew) 	    cudaFree(dev_Anew); CUDACHECK("free dev_Anew")
-    	if (buff)           cudaFree(buff); CUDACHECK("free buff")
-	if (d_out) 	    cudaFree(d_out); CUDACHECK("free d_out")
-	if (d_temp_storage) cudaFree(d_temp_storage); CUDACHECK("free d_temp_storage")
+	
+	// free memory section
+	if (A) 	            cudaFreeHost(A); 		CUDACHECK("free A")
+	if (Anew) 	    cudaFreeHost(Anew); 	CUDACHECK("free Anew")
+	if (dev_A)	    cudaFree(dev_A); 		CUDACHECK("free dev_A")
+	if (dev_Anew) 	    cudaFree(dev_Anew); 	CUDACHECK("free dev_Anew")
+    	if (buff)           cudaFree(buff); 		CUDACHECK("free buff")
+	if (d_out) 	    cudaFree(d_out);	        CUDACHECK("free d_out")
+	if (d_temp_storage) cudaFree(d_temp_storage);   CUDACHECK("free d_temp_storage")
+		
 	std::cout << "Memory has been freed" << std::endl;
+	
 	// end MPI engine
 	int code = MPI_Finalize();
 	MPI_CHECK(code, "mpi finalize")
+		
 	std::cout << "MPI engine was shut down" << std::endl;
 }
 
