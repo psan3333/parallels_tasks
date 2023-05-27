@@ -73,7 +73,7 @@ __global__ void abs_diff(double* A, double* Anew, double* buff, size_t size, siz
 	size_t idx = y * size + x;
 	
 	// check if idx in allocated area then calculate result
-	if(!(x <= 0 || y <= 0 || x => size - 1 || y => size_per_one_gpu - 1))
+	if(!(x <= 0 || y <= 0 || x >= (size - 1) || y >= (size_per_one_gpu - 1)))
 	{
 		buff[idx] = std::abs(A[idx] - Anew[idx]);
 	}
