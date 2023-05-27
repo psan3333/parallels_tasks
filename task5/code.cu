@@ -84,21 +84,22 @@ int findNearestPowerOfTwo(size_t num) {
 int main(int argc, char* argv[])
 {
 
+	// creates handler for end of execution moment
+	auto atExifStatus = std::atexit(free_pointers);
+
+	if (atExifStatus != 0)
+	{
+		std::cout << "Register error" << std::endl;
+		exit(-1);
+	}
+
+	if (argc != 4)
+	{
+		std::cout << "Invalid parameters count" << std::endl;
+		std::exit(-1);
+	}
+	
 	try {
-		// creates handler for end of execution moment
-		auto atExifStatus = std::atexit(free_pointers);
-
-		if (atExifStatus != 0)
-		{
-			std::cout << "Register error" << std::endl;
-			exit(-1);
-		}
-
-		if (argc != 4)
-		{
-			std::cout << "Invalid parameters count" << std::endl;
-			std::exit(-1);
-		}
 
 		//reads command prompt arguments: ./task4.out [max_aaccuracy] [size] [max_iterations]
 		double max_accuracy = std::stod(argv[1]);
