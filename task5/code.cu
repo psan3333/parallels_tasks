@@ -34,8 +34,10 @@ void free_pointers()
     	if (buff)           cudaFree(buff);
 	if (d_out) 	    cudaFree(d_out);
 	if (d_temp_storage) cudaFree(d_temp_storage);
+	std::cout << "Memory has been freed" << std::endl;
 	// end MPI engine
 	MPI_Finalize();
+	std::cout << "MPI engine was shut down" << std::endl;
 }
 
 // interpolation on matrix field
