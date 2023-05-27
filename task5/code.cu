@@ -52,10 +52,7 @@ __global__ void interpolate_boundaries(double* A, double* Anew, size_t size, siz
 	unsigned int up_idx = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int down_idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (up_idx == 0 || up_idx > size - 2) return;
-
-	if(up_idx < size)
-	{
+	if (!(up_idx == 0 || up_idx > size - 2)) {
 		AVG_CALC(A, Anew, size, 1, up_idx)
 		AVG_CALC(A, Anew, size, (size_per_one_gpu - 2), down_idx)
 	}
@@ -233,7 +230,7 @@ int main(int argc, char* argv[])
 		// params for cuda functions
 		unsigned int threads_x = std::min(findNearestPowerOfTwo(size), 1024);
 		unsigned int blocks_y = area_for_one_process;
-		unsigned int blocks_x = size / threads_x;
+		unsigned int blocks_x = size / threads_x + 1;
 
 		dim3 blockDim(threads_x, 1);
 		dim3 gridDim(blocks_x, blocks_y);
