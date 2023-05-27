@@ -34,6 +34,8 @@ void free_pointers()
     	if (buff)           cudaFree(buff);
 	if (d_out) 	    cudaFree(d_out);
 	if (d_temp_storage) cudaFree(d_temp_storage);
+	// end MPI engine
+	MPI_Finalize();
 }
 
 // interpolation on matrix field
@@ -100,7 +102,6 @@ int main(int argc, char* argv[])
 	}
 	
 	try {
-
 		//reads command prompt arguments: ./task4.out [max_aaccuracy] [size] [max_iterations]
 		double max_accuracy = std::stod(argv[1]);
 		int size = std::stoi(argv[2]);
@@ -242,9 +243,6 @@ int main(int argc, char* argv[])
 
 			interpolate_boundaries<<<size, 1, 0, cuda_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
 
-			cudaStreamSynchronize(matrix_calc_stream);
-			CUDACHECK("cuda_stream synchronization (after boundaries calculations)")
-
 			interpolate<<<gridDim, blockDim, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
 
 			// updates accuracy 1/100 times of main cycle iterations and on the last iteration
@@ -326,13 +324,11 @@ int main(int argc, char* argv[])
 			printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
 		}
 
-		// end MPI engine
-		error_code = MPI_Finalize();
-		MPI_CHECK(error_code, "mpi finalize")
 	}
 	catch (std::runtime_error& error) {
 		std::cout << error.what() << std::endl;
 		std::cout << "Program execution stops" << std::endl;
+		exit(-1);	
 	}
 
 	return 0;
