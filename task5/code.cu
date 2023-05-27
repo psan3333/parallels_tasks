@@ -244,6 +244,9 @@ int main(int argc, char* argv[])
 			interpolate_boundaries<<<size, 1, 0, cuda_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
 
 			interpolate<<<gridDim, blockDim, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
+			
+			cudaStreamSynchronize(cuda_stream);
+			CUDACHECK("cuda_stream synchronize after interpolation")
 
 			// updates accuracy 1/100 times of main cycle iterations and on the last iteration
 			if (num_of_iterations % 100 == 0 || num_of_iterations + 1 == max_iterations) {
@@ -254,7 +257,7 @@ int main(int argc, char* argv[])
 				cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, buff, d_out, alloc_memsize, matrix_calc_stream);
 				CUDACHECK("cub max reduction")
 
-				// synchronize streams to receive d_out max values from all devices
+				// synchronize streams to receive actual d_out max values from all devices
 				cudaStreamSynchronize(matrix_calc_stream);
 				CUDACHECK("matrix_calc_stream synchronization (inside error calculations)")
 
