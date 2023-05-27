@@ -9,7 +9,7 @@
 
 // error checks
 #define CUDACHECK(name) if (cudaGetLastError() != cudaSuccess) { throw std::runtime_error(name); } 
-#define MPI_CHECK(code, name) if (code != MPI_SUCCESS) { std::runtime_error(name); }
+#define MPI_CHECK(code, name) if (code != MPI_SUCCESS) { throw std::runtime_error(name); }
 
 // macros for average interpolation calculation
 #define AVG_CALC(A, Anew, size, i, j) Anew[i * size + j] = 0.25 * (A[i * size + j - 1] + A[(i - 1) * size + j] + A[(i + 1) * size + j] + A[i * size + j + 1]);
@@ -238,7 +238,7 @@ int main(int argc, char* argv[])
 
 	while (num_of_iterations < max_iterations && accuracy > max_accuracy) {
 
-		interpolate_boundaries<<<size, 1, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
+		interpolate_boundaries<<<size, 1, 0, cuda_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
 
 		cudaStreamSynchronize(matrix_calc_stream);
 		CUDACHECK("cuda_stream synchronization (after boundaries calculations)")
@@ -314,6 +314,9 @@ int main(int argc, char* argv[])
 		++num_of_iterations;
 		std::swap(dev_A, dev_Anew); // swap pointers for next calculations
 	}
+	
+	cudaStreamDestroy(cuda_stream);
+	cudaStreamDestroy(matrix_calc_stream);
 
 	if (rank == 0) {
 		printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
