@@ -27,16 +27,18 @@ double 	*A 		= nullptr,  // buffer for main matrix
 // handler funnction which executes before end of program execution and frees memory allocated dynamically
 void free_pointers()
 {
-	if (A) 	            cudaFree(A);
-	if (Anew) 	    cudaFree(Anew);
-	if (dev_A)	    cudaFree(dev_A);
-	if (dev_Anew) 	    cudaFree(dev_Anew);
-    	if (buff)           cudaFree(buff);
-	if (d_out) 	    cudaFree(d_out);
-	if (d_temp_storage) cudaFree(d_temp_storage);
+	std::cout << "End of execution" << std::endl;
+	if (A) 	            cudaFree(A); CUDACHECK()
+	if (Anew) 	    cudaFree(Anew); CUDACHECK()
+	if (dev_A)	    cudaFree(dev_A); CUDACHECK()
+	if (dev_Anew) 	    cudaFree(dev_Anew); CUDACHECK()
+    	if (buff)           cudaFree(buff); CUDACHECK()
+	if (d_out) 	    cudaFree(d_out); CUDACHECK()
+	if (d_temp_storage) cudaFree(d_temp_storage); CUDACHECK()
 	std::cout << "Memory has been freed" << std::endl;
 	// end MPI engine
-	MPI_Finalize();
+	int code = MPI_Finalize();
+	MPI_CHECK(code, "mpi finalize")
 	std::cout << "MPI engine was shut down" << std::endl;
 }
 
@@ -247,11 +249,12 @@ int main(int argc, char* argv[])
 
 			interpolate<<<gridDim, blockDim, 0, matrix_calc_stream>>>(dev_A, dev_Anew, size, area_for_one_process);
 			
-			cudaStreamSynchronize(cuda_stream);
-			CUDACHECK("cuda_stream synchronize after interpolation")
-
 			// updates accuracy 1/100 times of main cycle iterations and on the last iteration
 			if (num_of_iterations % 100 == 0 || num_of_iterations + 1 == max_iterations) {
+				
+				// synchronize to understand either we can make operations with matrix or not
+				cudaStreamSynchronize(cuda_stream);
+				CUDACHECK("cuda_stream synchronize after interpolation")
 
 				abs_diff<<<gridDim, blockDim, 0, matrix_calc_stream>>>(dev_A, dev_Anew, buff, size, area_for_one_process);
 
