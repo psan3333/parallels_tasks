@@ -91,13 +91,6 @@ int main(int argc, char* argv[])
 {
 
 	// creates handler for end of execution moment
-	auto atExifStatus = std::atexit(free_pointers);
-
-	if (atExifStatus != 0)
-	{
-		std::cout << "Register error" << std::endl;
-		exit(-1);
-	}
 
 	if (argc != 4)
 	{
@@ -336,8 +329,11 @@ int main(int argc, char* argv[])
 	catch (std::runtime_error& error) {
 		std::cout << error.what() << std::endl;
 		std::cout << "Program execution stops" << std::endl;
+		free_pointers();
 		exit(-1);	
 	}
+	
+	free_pointers();
 
 	return 0;
 }
