@@ -329,6 +329,7 @@ int main(int argc, char* argv[])
 		if (rank == 0) {
 			printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
 		}
+		free_pointers();
 
 	}
 	catch (std::runtime_error& error) {
@@ -337,8 +338,6 @@ int main(int argc, char* argv[])
 		free_pointers();
 		exit(-1);	
 	}
-	
-	free_pointers();
 
 	return 0;
 }
