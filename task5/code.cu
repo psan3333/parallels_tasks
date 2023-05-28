@@ -95,8 +95,6 @@ int findNearestPowerOfTwo(size_t num) {
 int main(int argc, char* argv[])
 {
 
-	// creates handler for end of execution moment
-
 	if (argc != 4)
 	{
 		std::cout << "Invalid parameters count" << std::endl;
