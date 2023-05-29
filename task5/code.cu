@@ -39,12 +39,6 @@ void free_pointers()
 	if (d_temp_storage) cudaFree(d_temp_storage);   CUDACHECK("free d_temp_storage")
 		
 	std::cout << "Memory has been freed" << std::endl;
-	
-	// end MPI engine
-	int code = MPI_Finalize();
-	MPI_CHECK(code, "mpi finalize")
-		
-	std::cout << "MPI engine was shut down" << std::endl;
 }
 
 // interpolation on matrix field
@@ -94,7 +88,12 @@ int findNearestPowerOfTwo(size_t num) {
 
 int main(int argc, char* argv[])
 {
-	auto at_exit = std::atexit(free_pointers);
+	auto atExifStatus = std::atexit(free_pointers);
+	if (atExifStatus != 0)
+	{
+		std::cout << "Register error" << std::endl;
+		exit(-1);
+	}
 
 	if (argc != 4)
 	{
@@ -328,6 +327,12 @@ int main(int argc, char* argv[])
 		if (rank == 0) {
 			printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
 		}
+		
+		// end MPI engine
+		int code = MPI_Finalize();
+		MPI_CHECK(code, "mpi finalize")
+
+		std::cout << "MPI engine was shut down" << std::endl;
 
 	}
 	catch (std::runtime_error& error) {
