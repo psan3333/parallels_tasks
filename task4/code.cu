@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
     size_t threads = (size < 1024) ? size : 1024;
     unsigned int blocks = size / threads;
 
-	dim3 blockDim(threads / 32, threads / 32);
+    dim3 blockDim(threads / 32, threads / 32);
     dim3 gridDim(blocks * 32, blocks * 32);
 
     double accuracy = max_accuracy + 1.0;
