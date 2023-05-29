@@ -329,7 +329,7 @@ int main(int argc, char* argv[])
 		}
 		
 		// end MPI engine
-		int code = MPI_Finalize();
+		error_code = MPI_Finalize();
 		MPI_CHECK(code, "mpi finalize")
 
 		std::cout << "MPI engine was shut down" << std::endl;
