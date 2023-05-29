@@ -109,12 +109,18 @@ int main(int argc, char* argv[])
     size_t temp_storage_bytes = 0;
     cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, buff, d_out, matrixSize);
     cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    
+    size_t threads = (size < 1024) ? size : 1024;
+    unsigned int blocks = size / threads;
+
+	dim3 blockDim(threads / 32, threads / 32);
+    dim3 gridDim(blocks * 32, blocks * 32);
 
     double accuracy = max_accuracy + 1.0;
     int num_of_iterations = 0;
     while (num_of_iterations < max_iterations && accuracy > max_accuracy) {
 
-        interpolate<<<size, size>>>(dev_A, dev_Anew);
+        interpolate<<<gridDim, blockDim>>>(dev_A, dev_Anew);
 
         //updates accuracy 1/100 times of main cycle iterations
         if (num_of_iterations % 100 == 0 || num_of_iterations + 1 == max_iterations) {
@@ -123,7 +129,7 @@ int main(int argc, char* argv[])
             cudaMemcpy(buff, dev_A, matrixSize * sizeof(double), cudaMemcpyDeviceToDevice);
             CUDACHECK("update dev_A");
 
-            abs_diff<<<size, size>>>(buff, dev_Anew);
+            abs_diff<<<gridDim, blockDim>>>(buff, dev_Anew);
 
             //max reduction
             cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, buff, d_out, matrixSize);
