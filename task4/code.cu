@@ -98,6 +98,7 @@ int main(int argc, char* argv[])
 
     double step = 10.0 / (size - 1);
     edge_interpolation<<<1, size>>>(dev_A, dev_Anew, step);
+    CUDACHECK("edges");
 
     //allocates buffer 'd_out' to contain max('abs_diff' function result)
     double* d_out;
