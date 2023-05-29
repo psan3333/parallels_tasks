@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
 		{
 			area_for_one_process += 2;
 		}
-		else 
+		else if (device_group_size != 1)
 		{
 			area_for_one_process += 1;
 		}
