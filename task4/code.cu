@@ -10,23 +10,6 @@
 
 #define CUDACHECK(name) if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) throw std::runtime_error(name);
 
-__global__ void edge_interpolation(double* A, double* Anew, double step)
-{
-    int size = blockDim.x;
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-
-    //inits edge values
-    A[index] = A[0] + index * step;
-    A[index * size] = A[0] + index * step;
-    A[size - 1 + size * index] = A[size - 1] + index * step;
-    A[size * (size - 1) + index] = A[size * (size - 1)] + index * step;
-
-    Anew[index] = Anew[0] + index * step;
-    Anew[index * size] = Anew[0] + index * step;
-    Anew[size - 1 + size * index] = Anew[size - 1] + index * step;
-    Anew[size * (size - 1) + index] = Anew[size * (size - 1)] + index * step;
-}
-
 __global__ void interpolate(double* A, double* Anew)
 {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -64,10 +47,15 @@ int main(int argc, char* argv[])
     int max_iterations = std::stoi(argv[3]);
 
     //allocate matrixes and set start conditions (angle values)
-    double* A = new double[matrixSize];
-    double* Anew = new double[matrixSize];
-    memset(A, 0, matrixSize * sizeof(double));
-    memset(Anew, 0, matrixSize * sizeof(double));
+    double* A;
+    double* Anew;
+    cudaMallocHost((void**)&A, matrixSize * sizeof(double));
+    CUDACHECK("A host alloc")
+    cudaMallocHost((void**)&Anew, matrixSize * sizeof(double));
+    CUDACHECK("Anew host alloc")
+        
+    std::memset(A, 0, matrixSize * sizeof(double));
+    std::memset(Anew, 0, matrixSize * sizeof(double));
 
     A[0] = 10.0;
     A[size - 1] = 20.0;
@@ -78,6 +66,19 @@ int main(int argc, char* argv[])
     Anew[size - 1] = 20.0;
     Anew[size * size - 1] = 30.0;
     Anew[size * (size - 1)] = 20.0;
+    
+    double step = 10.0 / (size - 1);
+    for (int i = 1; i < size - 1; i++) {
+        A[i] = A[0] + i * step;
+        A[i * size] = A[0] + i * step;
+        A[size - 1 + size * i] = A[size - 1] + i * step;
+        A[size * (size - 1) + i] = A[size * (size - 1)] + i * step;
+
+        Anew[i] = Anew[0] + i * step;
+        Anew[i * size] = Anew[0] + i * step;
+        Anew[size - 1 + size * i] = Anew[size - 1] + i * step;
+        Anew[size * (size - 1) + i] = Anew[size * (size - 1)] + i * step;
+    }
 
     //allocates data on GPU
     double* buff; //buffer for reduciton
@@ -95,10 +96,6 @@ int main(int argc, char* argv[])
     CUDACHECK("copy from A to dev_A");
     cudaMemcpy(dev_Anew, Anew, matrixSize * sizeof(double), cudaMemcpyHostToDevice);
     CUDACHECK("copy from Anew to dev_Anew");
-
-    double step = 10.0 / (size - 1);
-    edge_interpolation<<<1, size>>>(dev_A, dev_Anew, step);
-    CUDACHECK("edges");
 
     //allocates buffer 'd_out' to contain max('abs_diff' function result)
     double* d_out;
