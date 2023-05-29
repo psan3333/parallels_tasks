@@ -94,6 +94,7 @@ int findNearestPowerOfTwo(size_t num) {
 
 int main(int argc, char* argv[])
 {
+	auto at_exit = std::atexit(free_pointers);
 
 	if (argc != 4)
 	{
@@ -327,13 +328,11 @@ int main(int argc, char* argv[])
 		if (rank == 0) {
 			printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
 		}
-		free_pointers();
 
 	}
 	catch (std::runtime_error& error) {
 		std::cout << error.what() << std::endl;
 		std::cout << "Program execution stops" << std::endl;
-		free_pointers();
 		exit(-1);	
 	}
 
