@@ -142,7 +142,7 @@ int main(int argc, char* argv[])
 			}
 			// Расчитываем ошибку каждую сотую итерацию
 			abs_diff<<<threads * blocks * blocks, threads,  0, stream>>>(dev_A, dev_Anew, buff, size);
-			cub::DeviceReduce::Max(tempStorage, tempStorageSize, errorMatrix, deviceError, totalSize, stream);
+			cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, buff, d_out, matrixSize, stream);
 			CUDACHECK("cub max reduction");
 				
 			cudaStreamEndCapture(stream, &graph);
