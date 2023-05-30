@@ -102,56 +102,51 @@ int main(int argc, char* argv[])
     cudaMalloc((void**)&d_temp_storage, temp_storage_bytes);
     CUDACHECK("alloc d_temp_storage");
     
-    size_t threads = (size < 1024) ? size : 1024;
-    unsigned int blocks = size / threads;
-
-    dim3 blockDim(threads / 32, threads / 32);
-    dim3 gridDim(blocks * 32, blocks * 32);
-	bool isGraphCreated = false;
-	cudaStream_t stream;
+    bool isGraphCreated = false;
+	cudaStream_t stream, memoryStream;
 	cudaStreamCreate(&stream);
-	CUDACHECK("stream creation");
+	cudaStreamCreate(&memoryStream);
 	cudaGraph_t graph;
 	cudaGraphExec_t instance;
 
-    double accuracy = max_accuracy + 1.0;
-    int num_of_iterations = 0;
-    while (num_of_iterations < max_iterations && accuracy > max_accuracy) {
+	size_t threads = (size < 1024) ? size : 1024;
+    unsigned int blocks = size / threads;
 
-        // Расчет матрицы
+	dim3 blockDim(threads / 32, threads / 32);
+    dim3 gridDim(blocks * 32, blocks * 32);
+
+	int iter = 0;
+	double accuracy = max_accuracy + 1.0;
+	while(iter < max_iterations && accuracy > max_accuracy)
+	{
+		// Расчет матрицы
 		if (isGraphCreated)
 		{
 			cudaGraphLaunch(instance, stream);
-			CUDACHECK("launch graph")
 			
 			cudaMemcpyAsync(&accuracy, d_out, sizeof(double), cudaMemcpyDeviceToHost, stream);
 
 			cudaStreamSynchronize(stream);
-			CUDACHECK("stream synchronize")
 
-			num_of_iterations += 100;
+			iter += 100;
 		}
 		else
 		{
 			cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
-			CUDACHECK("capture begin");
-			for (size_t i = 0; i < 50; i++)
+			for(size_t i = 0; i < 50; i++)
 			{
 				interpolate<<<gridDim, blockDim, 0, stream>>>(dev_A, dev_Anew, size);
 				interpolate<<<gridDim, blockDim, 0, stream>>>(dev_Anew, dev_A, size);
 			}
 			// Расчитываем ошибку каждую сотую итерацию
-			abs_diff<<<threads * blocks * blocks, threads,  0, stream>>>(dev_A, dev_Anew, buff, size);
+			abs_diff<<<threads * blocks * blocks, threads, 0, stream>>>(dev_A, dev_Anew, buff, size);
 			cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, buff, d_out, matrixSize, stream);
-			CUDACHECK("cub max reduction");
-				
+	
 			cudaStreamEndCapture(stream, &graph);
-			CUDACHECK("end capture");
 			cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
-			CUDACHECK("graph instantiate");
 			isGraphCreated = true;
   		}
-    }
+	}
 
     printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
 
