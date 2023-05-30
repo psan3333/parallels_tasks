@@ -24,7 +24,7 @@ __global__ void interpolate(double* A, double* Anew, int size)
 	}
 }
 
-__global__ void abs_diff(double* A, double* Anew, double* buff) {
+__global__ void abs_diff(double* A, double* Anew, double* buff, int size) {
     size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
 	if (idx > size * size) return;
 
@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
 			cudaStreamSynchronize(stream);
 			CUDACHECK("stream synchronize")
 
-			iter += 100;
+			num_of_iterations += 100;
 		}
 		else
 		{
