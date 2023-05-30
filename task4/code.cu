@@ -10,32 +10,25 @@
 
 #define CUDACHECK(name) if (cudaGetLastError() != cudaSuccess || cudaDeviceSynchronize() != cudaSuccess) throw std::runtime_error(name);
 
-__global__ void interpolate(double* A, double* Anew)
+__global__ void interpolate(double* A, double* Anew, int size)
 {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int index = y * blockDim.x + x;
-    if (index > blockDim.x && index < blockDim.x * (blockDim.x - 1) - 1) {
-        int residual = index % blockDim.x;
-        if (residual == 0 || residual == blockDim.x - 1) {
-            return;
-        }
-    }
-    else {
-        return;
-    }
+    unsigned int j = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int i = blockIdx.y * blockDim.y + threadIdx.y;
 
-    //average between neighbours
-    Anew[index] = 0.25 * (A[index + 1] + A[index - 1] + A[index + blockDim.x] + A[index - blockDim.x]);
+	if (i * size + j > size * size) return;
+	
+	if(!((j == 0 || i == 0 || j == size - 1 || i == size - 1)))
+	{
+		Anew[i * size + j] = 0.25 * (A[i * size + j - 1] + A[(i - 1) * size + j] +
+							A[(i + 1) * size + j] + A[i * size + j + 1]);		
+	}
 }
 
-__global__ void abs_diff(double* A, double* Anew) {
-    int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y * blockDim.y + threadIdx.y;
-    int index = y * blockDim.x + x;
+__global__ void abs_diff(double* A, double* Anew, double* buff) {
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+	if (idx > size * size) return;
 
-    A[index] = A[index] - Anew[index];
-    A[index] = A[index] < 0 ? (A[index] * (-1)) : A[index];
+	buff[idx] = std::abs(Anew[idx] - A[idx]);
 }
 
 int main(int argc, char* argv[])
@@ -106,7 +99,8 @@ int main(int argc, char* argv[])
     void* d_temp_storage = NULL;
     size_t temp_storage_bytes = 0;
     cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, buff, d_out, matrixSize);
-    cudaMalloc(&d_temp_storage, temp_storage_bytes);
+    cudaMalloc((void**)&d_temp_storage, temp_storage_bytes);
+    CUDACHECK("alloc d_temp_storage");
     
     size_t threads = (size < 1024) ? size : 1024;
     unsigned int blocks = size / threads;
@@ -118,26 +112,33 @@ int main(int argc, char* argv[])
     int num_of_iterations = 0;
     while (num_of_iterations < max_iterations && accuracy > max_accuracy) {
 
-        interpolate<<<gridDim, blockDim>>>(dev_A, dev_Anew);
+        // Расчет матрицы
+		if (isGraphCreated)
+		{
+			cudaGraphLaunch(instance, stream);
+			
+			cudaMemcpyAsync(&accuracy, d_out, sizeof(double), cudaMemcpyDeviceToHost, stream);
 
-        //updates accuracy 1/100 times of main cycle iterations
-        if (num_of_iterations % 100 == 0 || num_of_iterations + 1 == max_iterations) {
+			cudaStreamSynchronize(stream);
 
-            //fills 'buff' with values from 'dev_A'
-            cudaMemcpy(buff, dev_A, matrixSize * sizeof(double), cudaMemcpyDeviceToDevice);
-            CUDACHECK("update dev_A");
-
-            abs_diff<<<gridDim, blockDim>>>(buff, dev_Anew);
-
-            //max reduction
-            cub::DeviceReduce::Max(d_temp_storage, temp_storage_bytes, buff, d_out, matrixSize);
-
-            cudaMemcpy(&accuracy, d_out, sizeof(double), cudaMemcpyDeviceToHost);
-            CUDACHECK("copy to accuracy");
-        }
-
-        ++num_of_iterations;
-        std::swap(dev_A, dev_Anew);
+			iter += 100;
+		}
+		else
+		{
+			cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+			for (size_t i = 0; i < 50; i++)
+			{
+				interpolate<<<gridDim, blockDim, 0, stream>>>(dev_A, dev_Anew, size);
+				interpolate<<<gridDim, blockDim, 0, stream>>>(dev_Anew, dev_A, size);
+			}
+			// Расчитываем ошибку каждую сотую итерацию
+			getErrorMatrix<<<threads * blocks * blocks, threads,  0, stream>>>(deviceMatrixAPtr, deviceMatrixBPtr, errorMatrix, size);
+			cub::DeviceReduce::Max(tempStorage, tempStorageSize, errorMatrix, deviceError, totalSize, stream);
+	
+			cudaStreamEndCapture(stream, &graph);
+			cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
+			isGraphCreated = true;
+  		}
     }
 
     printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
