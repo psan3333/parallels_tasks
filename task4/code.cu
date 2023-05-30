@@ -107,6 +107,12 @@ int main(int argc, char* argv[])
 
     dim3 blockDim(threads / 32, threads / 32);
     dim3 gridDim(blocks * 32, blocks * 32);
+	bool isGraphCreated = false;
+	cudaStream_t stream;
+	cudaStreamCreate(&stream);
+	CUDACHECK("stream creation");
+	cudaGraph_t graph;
+	cudaGraphExec_t instance;
 
     double accuracy = max_accuracy + 1.0;
     int num_of_iterations = 0;
@@ -116,27 +122,33 @@ int main(int argc, char* argv[])
 		if (isGraphCreated)
 		{
 			cudaGraphLaunch(instance, stream);
+			CUDACHECK("launch graph")
 			
 			cudaMemcpyAsync(&accuracy, d_out, sizeof(double), cudaMemcpyDeviceToHost, stream);
 
 			cudaStreamSynchronize(stream);
+			CUDACHECK("stream synchronize")
 
 			iter += 100;
 		}
 		else
 		{
 			cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+			CUDACHECK("capture begin");
 			for (size_t i = 0; i < 50; i++)
 			{
 				interpolate<<<gridDim, blockDim, 0, stream>>>(dev_A, dev_Anew, size);
 				interpolate<<<gridDim, blockDim, 0, stream>>>(dev_Anew, dev_A, size);
 			}
 			// Расчитываем ошибку каждую сотую итерацию
-			getErrorMatrix<<<threads * blocks * blocks, threads,  0, stream>>>(deviceMatrixAPtr, deviceMatrixBPtr, errorMatrix, size);
+			abs_diff<<<threads * blocks * blocks, threads,  0, stream>>>(dev_A, dev_Anew, buff, size);
 			cub::DeviceReduce::Max(tempStorage, tempStorageSize, errorMatrix, deviceError, totalSize, stream);
-	
+			CUDACHECK("cub max reduction");
+				
 			cudaStreamEndCapture(stream, &graph);
+			CUDACHECK("end capture");
 			cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
+			CUDACHECK("graph instantiate");
 			isGraphCreated = true;
   		}
     }
@@ -151,10 +163,19 @@ int main(int argc, char* argv[])
     CUDACHECK("free dev_Anew");
     cudaFree(buff);
     CUDACHECK("free buff");
+	cudaFree(d_temp_storage);
+	CUDACHECK("free d_temp_storage");
+	cudaFreeHost(A);
+	CUDACHECK("free A");
+	cudaFreeHost(Anew);
+	CUDACHECK("free Anew");
+	cudaFree(d_out);
+	CUDACHECK("free d_out");
+	cudaStreamDestroy(stream);
+	CUDACHECK("destroy stream");
+	cudaGraphDestroy(graph);
+	CUDACHECK("destroy graph");
 
-    //CPU free
-    free(A);
-    free(Anew);
 
     return 0;
 }
