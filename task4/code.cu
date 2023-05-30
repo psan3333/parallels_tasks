@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
   		}
 	}
 
-    printf("Iterations: %d\nAccuracy: %lf\n", num_of_iterations, accuracy);
+    printf("Iterations: %d\nAccuracy: %lf\n", iter, accuracy);
 
     //free memory section
     //GPU free
